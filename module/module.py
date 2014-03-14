@@ -64,6 +64,7 @@ properties = {
 
 # called by the plugin manager to get a broker
 def get_instance(plugin):
+    # logger.info("[WS_Arbiter] get_instance ...")
     instance = Ws_arbiter(plugin)
     return instance
 
@@ -86,7 +87,7 @@ def get_commands(time_stamps, hosts, services, return_codes, outputs):
             cmd = '[%s] PROCESS_HOST_CHECK_RESULT;%s;%s;%s' % (t if t is not None else current_time_stamp, h, r, o)
         else:
             cmd = '[%s] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%s;%s' % (t if t is not None else current_time_stamp, h, s, r, o)
-        logger.debug("[Ws_arbiter] CMD: %s" % (cmd))
+        logger.debug("[WS_Arbiter] CMD: %s" % (cmd))
         commands.append(cmd)
 
     # Trivial case: empty commmand list
@@ -96,11 +97,11 @@ def get_commands(time_stamps, hosts, services, return_codes, outputs):
     # Sanity check: if we get N return codes, we must have N hosts.
     # The other values could be None
     if (len(return_codes) != len(hosts)):
-        logger.error("[Ws_arbiter] number of return codes (%d) does not match number of hosts (%d)" % (len(return_codes), len(hosts)))
+        logger.error("[WS_Arbiter] number of return codes (%d) does not match number of hosts (%d)" % (len(return_codes), len(hosts)))
         abort(400, "number of return codes does not match number of hosts")
 
     map(_compose_command, time_stamps, hosts, services, return_codes, outputs)
-    logger.debug("[Ws_arbiter] commands = %s" % (str(commands)))
+    logger.debug("[WS_Arbiter] received command: %s" % (str(commands)))
     return commands
 
 
@@ -115,18 +116,18 @@ def get_page():
         return_code_list = []
         output_list = []
         time_stamp_list = request.forms.getall(key='time_stamp')
-        logger.debug("[Ws_arbiter] time_stamp_list: %s" % (time_stamp_list))
+        logger.debug("[WS_Arbiter] time_stamp_list: %s" % (time_stamp_list))
         host_name_list = request.forms.getall(key='host_name')
-        logger.debug("[Ws_arbiter] host_name_list: %s" % (host_name_list))
+        logger.debug("[WS_Arbiter] host_name_list: %s" % (host_name_list))
         service_description_list = request.forms.getall(key='service_description')
-        logger.debug("[Ws_arbiter] service_description_list: %s" % (service_description_list))
+        logger.debug("[WS_Arbiter] service_description_list: %s" % (service_description_list))
         return_code_list = request.forms.getall(key='return_code')
-        logger.debug("[Ws_arbiter] return_code_list: %s" % (return_code_list))
+        logger.debug("[WS_Arbiter] return_code_list: %s" % (return_code_list))
         output_list = request.forms.getall(key='output')
-        logger.debug("[Ws_arbiter] output_list: %s" % (output_list))
+        logger.debug("[WS_Arbiter] output_list: %s" % (output_list))
         commands_list = get_commands(time_stamp_list, host_name_list, service_description_list, return_code_list, output_list)
     except Exception, e:
-        logger.error("[Ws_arbiter] failed to get the lists: %s" % str(e))
+        logger.error("[WS_Arbiter] failed to get the lists: %s" % str(e))
         commands_list = []
 
     # We check for auth if it's not anonymously allowed
@@ -140,12 +141,181 @@ def get_page():
             abort(403, 'Authentication denied')
 
     # Adding commands to the main queue()
-    logger.debug("[Ws_arbiter] commands =  %s" % str(sorted(commands_list)))
+    logger.debug("[WS_Arbiter] commands =  %s" % str(sorted(commands_list)))
     for c in sorted(commands_list):
         ext = ExternalCommand(c)
         app.from_q.put(ext)
 
     # OK here it's ok, it will return a 200 code
+
+
+def do_restart():
+    commands_list = []
+
+    # Getting lists of informations for the commands
+    time_stamp = request.forms.get('time_stamp', int(time.time()))
+    command = '[%s] RESTART_PROGRAM\n' % time_stamp
+
+    # We check for auth if it's not anonymously allowed
+    if app.username != 'anonymous':
+        basic = parse_auth(request.environ.get('HTTP_AUTHORIZATION', ''))
+        # Maybe the user not even ask for user/pass. If so, bail out
+        if not basic:
+            abort(401, 'Authentication required')
+        # Maybe he do not give the good credential?
+        if basic[0] != app.username or basic[1] != app.password:
+            abort(403, 'Authentication denied')
+
+    # Adding commands to the main queue()
+    logger.debug("[WS_Arbiter] commands =  %s" % str(command))
+    ext = ExternalCommand(command)
+    app.from_q.put(ext)
+
+    # OK here it's ok, it will return a 200 code
+
+
+#service, sticky, notify, persistent, author, comment
+def do_acknowledge():
+    # Getting lists of informations for the commands
+    action              = request.forms.get('action', 'add')
+    time_stamp          = request.forms.get('time_stamp', int(time.time()))
+    host_name           = request.forms.get('host_name', '')
+    service_description = request.forms.get('service_description', '')
+    sticky              = request.forms.get('sticky', '1')
+    notify              = request.forms.get('notify', '0')
+    persistent          = request.forms.get('persistent', '1')
+    author              = request.forms.get('author', 'anonymous')
+    comment             = request.forms.get('comment', 'No comment')
+    # logger.warning("[Ws_arbiter] host: '%s', service: '%s', comment: '%s'" % (host_name, service_description, comment))
+ 
+    if not host_name:
+        abort(400, 'Missing parameter host_name')
+    if action == 'add':
+        if service_description:
+            command = '[%s] ACKNOWLEDGE_SVC_PROBLEM;%s;%s;%s;%s;%s;%s;%s\n' % ( time_stamp,
+                                                                                host_name,
+                                                                                service_description,
+                                                                                sticky,
+                                                                                notify,
+                                                                                persistent,
+                                                                                author,
+                                                                                comment
+                                                                                )
+        else:
+            command = '[%s] ACKNOWLEDGE_HOST_PROBLEM;%s;%s;%s;%s;%s;%s\n' % (   time_stamp,
+                                                                                host_name,
+                                                                                sticky,
+                                                                                notify,
+                                                                                persistent,
+                                                                                author,
+                                                                                comment
+                                                                                )
+        
+    if action == 'delete':
+        if service_description:
+            # REMOVE_SVC_ACKNOWLEDGEMENT;<host_name>;<service_description>
+            command = '[%s] REMOVE_SVC_ACKNOWLEDGEMENT;%s;%s\n' % ( time_stamp,
+                                                                    host_name,
+                                                                    service_description)
+        else:
+            # REMOVE_HOST_ACKNOWLEDGEMENT;<host_name>
+            command = '[%s] REMOVE_HOST_ACKNOWLEDGEMENT;%s\n' % ( time_stamp,
+                                                                  host_name)
+                                                                                
+
+    # logger.warning("[WS_Arbiter] command: %s" % (command))
+    # We check for auth if it's not anonymously allowed
+    if app.username != 'anonymous':
+        basic = parse_auth(request.environ.get('HTTP_AUTHORIZATION', ''))
+        # Maybe the user not even ask for user/pass. If so, bail out
+        if not basic:
+            abort(401, 'Authentication required')
+        # Maybe he do not give the good credential?
+        if basic[0] != app.username or basic[1] != app.password:
+            abort(403, 'Authentication denied')
+
+    # Adding commands to the main queue()
+    ext = ExternalCommand(command)
+    app.from_q.put(ext)
+
+    # OK here it's ok, it will return a 200 code
+
+
+def do_downtime():
+    # Getting lists of informations for the commands
+    action              = request.forms.get('action', 'add')
+    time_stamp          = request.forms.get('time_stamp', int(time.time()))
+    host_name           = request.forms.get('host_name', '')
+    service_description = request.forms.get('service_description', '')
+    start_time          = request.forms.get('start_time', int(time.time()))
+    end_time            = request.forms.get('end_time', int(time.time()))
+    # Fixed is 1 for a period between start and end time
+    fixed               = request.forms.get('fixed', '1')
+    # Fixed is 0 (flexible) for a period of duration seconds from start time 
+    duration            = request.forms.get('duration', int('86400'))
+    trigger_id          = request.forms.get('trigger_id', '0')
+    author              = request.forms.get('author', 'anonymous')
+    comment             = request.forms.get('comment', 'No comment')
+    # logger.warning("[WS_Arbiter] Downtime %s - host: '%s', service: '%s', comment: '%s'" % (action, host_name, service_description, comment))
+ 
+    if not host_name:
+        abort(400, 'Missing parameter host_name')
+    if action == 'add':
+        if service_description:
+            # SCHEDULE_SVC_DOWNTIME;<host_name>;<service_description>;<start_time>;<end_time>;<fixed>;<trigger_id>;<duration>;<author>;<comment>
+            command = '[%s] SCHEDULE_SVC_DOWNTIME;%s;%s;%s;%s;%s;%s;%s;%s;%s\n' % ( time_stamp,
+                                                                                    host_name,
+                                                                                    service_description,
+                                                                                    start_time,
+                                                                                    end_time,
+                                                                                    fixed,
+                                                                                    trigger_id,
+                                                                                    duration,
+                                                                                    author,
+                                                                                    comment
+                                                                                   )
+        else:
+            # SCHEDULE_HOST_DOWNTIME;<host_name>;<start_time>;<end_time>;<fixed>;<trigger_id>;<duration>;<author>;<comment>
+            command = '[%s] SCHEDULE_HOST_DOWNTIME;%s;%s;%s;%s;%s;%s;%s;%s\n' % (   time_stamp,
+                                                                                    host_name,
+                                                                                    start_time,
+                                                                                    end_time,
+                                                                                    fixed,
+                                                                                    trigger_id,
+                                                                                    duration,
+                                                                                    author,
+                                                                                    comment
+                                                                                )
+
+    if action == 'delete':
+        if service_description:
+            # DEL_ALL_SVC_DOWNTIMES;<host_name>;<service_description>
+            command = '[%s] DEL_ALL_SVC_DOWNTIMES;%s;%s\n' % ( time_stamp,
+                                                               host_name,
+                                                               service_description)
+        else:
+            # DEL_ALL_SVC_DOWNTIMES;<host_name>
+            command = '[%s] DEL_ALL_HOST_DOWNTIMES;%s\n' % ( time_stamp,
+                                                             host_name)
+                                                                                
+
+    # We check for auth if it's not anonymously allowed
+    if app.username != 'anonymous':
+        basic = parse_auth(request.environ.get('HTTP_AUTHORIZATION', ''))
+        # Maybe the user not even ask for user/pass. If so, bail out
+        if not basic:
+            abort(401, 'Authentication required')
+        # Maybe he do not give the good credential?
+        if basic[0] != app.username or basic[1] != app.password:
+            abort(403, 'Authentication denied')
+
+    # Adding commands to the main queue()
+    logger.warning("[WS_Arbiter] command =  %s" % command)
+    ext = ExternalCommand(command)
+    app.from_q.put(ext)
+
+    # OK here it's ok, it will return a 200 code
+
 
 
 # This module will open an HTTP service, where a user can send a command, like a check
@@ -154,21 +324,35 @@ class Ws_arbiter(BaseModule):
     def __init__(self, modconf):
         BaseModule.__init__(self, modconf)
         try:
+            logger.debug("[WS_Arbiter] Configuration starting ...")
             self.username = getattr(modconf, 'username', 'anonymous')
             self.password = getattr(modconf, 'password', '')
             self.port = int(getattr(modconf, 'port', '7760'))
             self.host = getattr(modconf, 'host', '0.0.0.0')
+            logger.debug("[WS_Arbiter] Configuration done, host: %s(%s))" %(self.host, self.port))
         except AttributeError:
-            logger.error("[Ws_arbiter] The module is missing a property, check module declaration in shinken-specific.cfg")
+            logger.error("[WS_Arbiter] The module is missing a property, check module declaration in shinken-specific.cfg")
+            raise
+        except Exception, e:
+            logger.error("[WS_Arbiter] Exception : %s" % str(e))
             raise
 
     # We initialize the HTTP part. It's a simple wsgi backend
     # with a select hack so we can still exit if someone ask it
     def init_http(self):
-        logger.info("[Ws_arbiter] Starting WS arbiter http socket")
-        self.srv = run(host=self.host, port=self.port, server='wsgirefselect')
+        logger.info("[WS_Arbiter] Starting WS arbiter http socket")
+        try:
+            self.srv = run(host=self.host, port=self.port, server='wsgirefselect')
+        except Exception, e:
+            logger.error("[WS_Arbiter] Exception : %s" % str(e))
+            raise
+
+        logger.info("[WS_Arbiter] Server started")
         # And we link our page
         route('/push_check_result', callback=get_page, method='POST')
+        route('/restart', callback=do_restart, method='POST')
+        route('/acknowledge', callback=do_acknowledge, method='POST')
+        route('/downtime', callback=do_downtime, method='POST')
 
     # When you are in "external" mode, that is the main loop of your process
     def main(self):
