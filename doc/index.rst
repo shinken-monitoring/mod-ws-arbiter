@@ -25,48 +25,48 @@ Using the Web Service Module
 The web service listens for POSTs to:
 
  - /restart
-  Make Shinken restart all daemons (/etc/init.d/shinken restart)
+  Makes Shinken restart all daemons (/etc/init.d/shinken restart)
 
   Command::
     curl -u user:password -d '' http://shinken-srv:7760/restart
 
 
  - /reload
-  Make Shinken reload configuration (/etc/init.d/shinken reload)
+  Makes Shinken reload configuration (/etc/init.d/shinken reload)
  
   Command::
     curl -u user:password -d '' http://shinken-srv:7760/reload
 
 
  - /acknowledge
-Set/remove an acknowledge for an host/service
+  Sets/removes an acknowledge for an host/service
 
 
-Parameters:
- - action: (default = add)
-  add, to add an acknowledge for an host/service
-  delete, to remove current acknowledges on host/service
-  
- - host_name:
-  Host name
-  
- - service_description: (default = '' for host acknowledge only)
-  Service description
-  
- - time_stamp: (default = current time)
-  
- - sticky: (default = 1)
+  Parameters:
+   - action: (default = add)
+    add, to add an acknowledge for an host/service
+    delete, to remove current acknowledges on host/service
+    
+   - host_name:
+    Host name
+    
+   - service_description: (default = '' for host acknowledge only)
+    Service description
+    
+   - time_stamp: (default = current time)
+    
+   - sticky: (default = 1)
 
- - notify: (default = 0)
+   - notify: (default = 0)
 
- - persistent: (default = 1)
+   - persistent: (default = 1)
 
- - author: (default = 'anonymous')
+   - author: (default = 'anonymous')
 
- - comment: (default = 'No comment')
+   - comment: (default = 'No comment')
 
  
-  Command::
+  Command:
     curl -u user:password -d "&host_name=host-ack&service_description=service-ack&author=Me&comment=Ack problem" http://shinken-srv:7760/acknowledge
 
  - /downtime
