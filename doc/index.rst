@@ -25,19 +25,19 @@ Using the Web Service Module
 The web service listens for POSTs to:
 
  - /restart
-Make Shinken restart all daemons (/etc/init.d/shinken restart)
+  Make Shinken restart all daemons (/etc/init.d/shinken restart)
 
-```
-curl -u user:password -d '' http://shinken-srv:7760/restart
-```
+  ``
+  curl -u user:password -d '' http://shinken-srv:7760/restart
+  ``
 
 
  - /reload
-Make Shinken reload configuration (/etc/init.d/shinken reload)
+  Make Shinken reload configuration (/etc/init.d/shinken reload)
 
-```
-curl -u user:password -d '' http://shinken-srv:7760/reload
-```
+  ``
+  curl -u user:password -d '' http://shinken-srv:7760/reload
+  ``
 
 
  - /acknowledge
