@@ -27,17 +27,15 @@ The web service listens for POSTs to:
  - /restart
   Make Shinken restart all daemons (/etc/init.d/shinken restart)
 
-  ``
-  curl -u user:password -d '' http://shinken-srv:7760/restart
-  ``
+  Command::
+    curl -u user:password -d '' http://shinken-srv:7760/restart
 
 
  - /reload
   Make Shinken reload configuration (/etc/init.d/shinken reload)
-
-  ``
-  curl -u user:password -d '' http://shinken-srv:7760/reload
-  ``
+ 
+  Command::
+    curl -u user:password -d '' http://shinken-srv:7760/reload
 
 
  - /acknowledge
@@ -67,9 +65,9 @@ Parameters:
 
  - comment: (default = 'No comment')
 
-```
-curl -u user:password -d "&host_name=host-ack&service_description=service-ack&author=Me&comment=Ack problem" http://shinken-srv:7760/acknowledge
-```
+ 
+  Command::
+    curl -u user:password -d "&host_name=host-ack&service_description=service-ack&author=Me&comment=Ack problem" http://shinken-srv:7760/acknowledge
 
  - /downtime
 Set/remove a downtime for an host/service
@@ -100,24 +98,24 @@ Set/remove a downtime for an host/service
 
  - comment: (default = 'No comment')
 
-```
-curl -u user:password -d "&host_name=host-ack&author=Me&comment=Downtime host" http://shinken-srv:7760/downtime
-```
+ 
+  Command::
+    curl -u user:password -d "&host_name=host-ack&author=Me&comment=Downtime host" http://shinken-srv:7760/downtime
 
  - /push_check_result
 
 Use curl or embed the HTTP calls in your software to submit check results.
 
-```
-curl -u user:password -d "time_stamp=$(date +%s)&host_name=host-checked&service_description=service-checked&return_code=0&output=Everything OK" http://shinken-srv:7760/push_check_result
-```
+ 
+  Command::
+    curl -u user:password -d "time_stamp=$(date +%s)&host_name=host-checked&service_description=service-checked&return_code=0&output=Everything OK" http://shinken-srv:7760/push_check_result
 
 Example with more readability:
   
 ::
 
   curl 
--u user:password 
+  -u user:password 
   -d "time_stamp=$(date +%s)
 ::
   &host_name=host-checked
