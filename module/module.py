@@ -141,7 +141,7 @@ def get_page():
             abort(403, 'Authentication denied')
 
     # Adding commands to the main queue()
-    logger.debug("[WS_Arbiter] commands =  %s" % str(sorted(commands_list)))
+    logger.debug("[WS_Arbiter] commands: %s" % str(sorted(commands_list)))
     for c in sorted(commands_list):
         ext = ExternalCommand(c)
         app.from_q.put(ext)
@@ -150,8 +150,6 @@ def get_page():
 
 
 def do_restart():
-    commands_list = []
-
     # Getting lists of informations for the commands
     time_stamp = request.forms.get('time_stamp', int(time.time()))
     command = '[%s] RESTART_PROGRAM\n' % time_stamp
@@ -167,7 +165,30 @@ def do_restart():
             abort(403, 'Authentication denied')
 
     # Adding commands to the main queue()
-    logger.debug("[WS_Arbiter] commands =  %s" % str(command))
+    logger.warning("[WS_Arbiter] command: %s" % str(command))
+    ext = ExternalCommand(command)
+    app.from_q.put(ext)
+
+    # OK here it's ok, it will return a 200 code
+
+
+def do_reload():
+    # Getting lists of informations for the commands
+    time_stamp = request.forms.get('time_stamp', int(time.time()))
+    command = '[%s] RELOAD_CONFIG\n' % time_stamp
+
+    # We check for auth if it's not anonymously allowed
+    if app.username != 'anonymous':
+        basic = parse_auth(request.environ.get('HTTP_AUTHORIZATION', ''))
+        # Maybe the user not even ask for user/pass. If so, bail out
+        if not basic:
+            abort(401, 'Authentication required')
+        # Maybe he do not give the good credential?
+        if basic[0] != app.username or basic[1] != app.password:
+            abort(403, 'Authentication denied')
+
+    # Adding commands to the main queue()
+    logger.warning("[WS_Arbiter] command: %s" % str(command))
     ext = ExternalCommand(command)
     app.from_q.put(ext)
 
@@ -186,10 +207,11 @@ def do_acknowledge():
     persistent          = request.forms.get('persistent', '1')
     author              = request.forms.get('author', 'anonymous')
     comment             = request.forms.get('comment', 'No comment')
-    # logger.warning("[Ws_arbiter] host: '%s', service: '%s', comment: '%s'" % (host_name, service_description, comment))
+    logger.debug("[WS_Arbiter] Acknowledge %s - host: '%s', service: '%s', comment: '%s'" % (action, host_name, service_description, comment))
  
     if not host_name:
         abort(400, 'Missing parameter host_name')
+        
     if action == 'add':
         if service_description:
             command = '[%s] ACKNOWLEDGE_SVC_PROBLEM;%s;%s;%s;%s;%s;%s;%s\n' % ( time_stamp,
@@ -235,6 +257,7 @@ def do_acknowledge():
             abort(403, 'Authentication denied')
 
     # Adding commands to the main queue()
+    logger.debug("[WS_Arbiter] command: %s" % str(command))
     ext = ExternalCommand(command)
     app.from_q.put(ext)
 
@@ -256,10 +279,11 @@ def do_downtime():
     trigger_id          = request.forms.get('trigger_id', '0')
     author              = request.forms.get('author', 'anonymous')
     comment             = request.forms.get('comment', 'No comment')
-    # logger.warning("[WS_Arbiter] Downtime %s - host: '%s', service: '%s', comment: '%s'" % (action, host_name, service_description, comment))
+    logger.debug("[WS_Arbiter] Downtime %s - host: '%s', service: '%s', comment: '%s'" % (action, host_name, service_description, comment))
  
     if not host_name:
         abort(400, 'Missing parameter host_name')
+        
     if action == 'add':
         if service_description:
             # SCHEDULE_SVC_DOWNTIME;<host_name>;<service_description>;<start_time>;<end_time>;<fixed>;<trigger_id>;<duration>;<author>;<comment>
@@ -310,7 +334,7 @@ def do_downtime():
             abort(403, 'Authentication denied')
 
     # Adding commands to the main queue()
-    logger.warning("[WS_Arbiter] command =  %s" % command)
+    logger.debug("[WS_Arbiter] command =  %s" % command)
     ext = ExternalCommand(command)
     app.from_q.put(ext)
 
@@ -329,7 +353,7 @@ class Ws_arbiter(BaseModule):
             self.password = getattr(modconf, 'password', '')
             self.port = int(getattr(modconf, 'port', '7760'))
             self.host = getattr(modconf, 'host', '0.0.0.0')
-            logger.debug("[WS_Arbiter] Configuration done, host: %s(%s))" %(self.host, self.port))
+            logger.info("[WS_Arbiter] Configuration done, host: %s(%s), username: %s)" %(self.host, self.port, self.username))
         except AttributeError:
             logger.error("[WS_Arbiter] The module is missing a property, check module declaration in shinken-specific.cfg")
             raise
@@ -351,6 +375,7 @@ class Ws_arbiter(BaseModule):
         # And we link our page
         route('/push_check_result', callback=get_page, method='POST')
         route('/restart', callback=do_restart, method='POST')
+        route('/reload', callback=do_reload, method='POST')
         route('/acknowledge', callback=do_acknowledge, method='POST')
         route('/downtime', callback=do_downtime, method='POST')
 
