@@ -112,7 +112,7 @@ The web service listens for POSTs to:
 
   Command:
   ::
-    curl -u user:password -d "time_stamp=$(date +%s)&host_name=host-checked&service_description=service-checked&return_code=0&output=Everything OK" http://shinken-srv:7760/push_check_result
+    curl -u user:password -d "time_stamp=$(date +%s)&host_name=host-checked&service_description=service-checked&return_code=0" --data-urlencode "output=Everything OK" http://shinken-srv:7760/push_check_result
 
   Example with more readability:
     
@@ -123,6 +123,6 @@ The web service listens for POSTs to:
     -d "time_stamp=$(date +%s)
     &host_name=host-checked
     &service_description=service-checked
-    &return_code=0
-    &output=Everything OK
+    &return_code=0"
+    --data-urlencode = "output=Everything OK"
     http://shinken-srv:7760/push_check_result
