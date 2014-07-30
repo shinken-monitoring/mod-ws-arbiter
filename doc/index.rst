@@ -124,5 +124,5 @@ The web service listens for POSTs to:
     &host_name=host-checked
     &service_description=service-checked
     &return_code=0"
-    --data-urlencode = "output=Everything OK"
+    --data-urlencode "output=Everything OK"
     http://shinken-srv:7760/push_check_result
