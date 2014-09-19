@@ -407,7 +407,7 @@ class Ws_arbiter(BaseModule):
             try:
                 inputready, _, _ = select.select(input, [], [], 1)
             except select.error, e:
-                logger.warning("[WS_Arbiter] Exception : %s" % str(e))
+                logger.warning("[WS_Arbiter] Exception: %s", str(e))
                 continue
             for s in inputready:
                 # If it's a web request, ask the webserver to do it
