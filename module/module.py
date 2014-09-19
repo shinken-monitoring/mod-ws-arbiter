@@ -404,7 +404,11 @@ class Ws_arbiter(BaseModule):
         # Main blocking loop
         while not self.interrupted:
             input = [self.srv.socket]
-            inputready, _, _ = select.select(input, [], [], 1)
+            try:
+                inputready, _, _ = select.select(input, [], [], 1)
+            except select.error, e:
+                logger.warning("[WS_Arbiter] Exception : %s" % str(e))
+                continue
             for s in inputready:
                 # If it's a web request, ask the webserver to do it
                 if s == self.srv.socket:
