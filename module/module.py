@@ -72,6 +72,17 @@ def get_instance(plugin):
 app = None
 
 
+def check_auth():
+    """Check for auth if it's not anonymously allowed"""
+    if app.username != 'anonymous':
+        basic = parse_auth(request.environ.get('HTTP_AUTHORIZATION', ''))
+        # Maybe the user not even ask for user/pass. If so, bail out
+        if not basic:
+            abort(401, 'Authentication required')
+        # Maybe he do not give the good credential?
+        if basic[0] != app.username or basic[1] != app.password:
+            abort(403, 'Authentication denied')
+
 def get_commands(time_stamps, hosts, services, return_codes, outputs):
     """Composing a command list based on the information received in
     POST request"""
@@ -130,15 +141,7 @@ def get_page():
         logger.error("[WS_Arbiter] failed to get the lists: %s" % str(e))
         commands_list = []
 
-    # We check for auth if it's not anonymously allowed
-    if app.username != 'anonymous':
-        basic = parse_auth(request.environ.get('HTTP_AUTHORIZATION', ''))
-        # Maybe the user not even ask for user/pass. If so, bail out
-        if not basic:
-            abort(401, 'Authentication required')
-        # Maybe he do not give the good credential?
-        if basic[0] != app.username or basic[1] != app.password:
-            abort(403, 'Authentication denied')
+    check_auth()
 
     # Adding commands to the main queue()
     logger.debug("[WS_Arbiter] commands: %s" % str(sorted(commands_list)))
@@ -154,15 +157,7 @@ def do_restart():
     time_stamp = request.forms.get('time_stamp', int(time.time()))
     command = '[%s] RESTART_PROGRAM\n' % time_stamp
 
-    # We check for auth if it's not anonymously allowed
-    if app.username != 'anonymous':
-        basic = parse_auth(request.environ.get('HTTP_AUTHORIZATION', ''))
-        # Maybe the user not even ask for user/pass. If so, bail out
-        if not basic:
-            abort(401, 'Authentication required')
-        # Maybe he do not give the good credential?
-        if basic[0] != app.username or basic[1] != app.password:
-            abort(403, 'Authentication denied')
+    check_auth()
 
     # Adding commands to the main queue()
     logger.warning("[WS_Arbiter] command: %s" % str(command))
@@ -177,15 +172,7 @@ def do_reload():
     time_stamp = request.forms.get('time_stamp', int(time.time()))
     command = '[%s] RELOAD_CONFIG\n' % time_stamp
 
-    # We check for auth if it's not anonymously allowed
-    if app.username != 'anonymous':
-        basic = parse_auth(request.environ.get('HTTP_AUTHORIZATION', ''))
-        # Maybe the user not even ask for user/pass. If so, bail out
-        if not basic:
-            abort(401, 'Authentication required')
-        # Maybe he do not give the good credential?
-        if basic[0] != app.username or basic[1] != app.password:
-            abort(403, 'Authentication denied')
+    check_auth()
 
     # Adding commands to the main queue()
     logger.warning("[WS_Arbiter] command: %s" % str(command))
@@ -246,15 +233,7 @@ def do_acknowledge():
                                                                                 
 
     # logger.warning("[WS_Arbiter] command: %s" % (command))
-    # We check for auth if it's not anonymously allowed
-    if app.username != 'anonymous':
-        basic = parse_auth(request.environ.get('HTTP_AUTHORIZATION', ''))
-        # Maybe the user not even ask for user/pass. If so, bail out
-        if not basic:
-            abort(401, 'Authentication required')
-        # Maybe he do not give the good credential?
-        if basic[0] != app.username or basic[1] != app.password:
-            abort(403, 'Authentication denied')
+    check_auth()
 
     # Adding commands to the main queue()
     logger.debug("[WS_Arbiter] command: %s" % str(command))
