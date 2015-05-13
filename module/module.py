@@ -195,10 +195,10 @@ def do_acknowledge():
     author              = request.forms.get('author', 'anonymous')
     comment             = request.forms.get('comment', 'No comment')
     logger.debug("[WS_Arbiter] Acknowledge %s - host: '%s', service: '%s', comment: '%s'" % (action, host_name, service_description, comment))
- 
+
     if not host_name:
         abort(400, 'Missing parameter host_name')
-        
+
     if action == 'add':
         if service_description:
             command = '[%s] ACKNOWLEDGE_SVC_PROBLEM;%s;%s;%s;%s;%s;%s;%s\n' % ( time_stamp,
@@ -219,7 +219,7 @@ def do_acknowledge():
                                                                                 author,
                                                                                 comment
                                                                                 )
-        
+
     if action == 'delete':
         if service_description:
             # REMOVE_SVC_ACKNOWLEDGEMENT;<host_name>;<service_description>
@@ -230,13 +230,50 @@ def do_acknowledge():
             # REMOVE_HOST_ACKNOWLEDGEMENT;<host_name>
             command = '[%s] REMOVE_HOST_ACKNOWLEDGEMENT;%s\n' % ( time_stamp,
                                                                   host_name)
-                                                                                
+
 
     # logger.warning("[WS_Arbiter] command: %s" % (command))
     check_auth()
 
     # Adding commands to the main queue()
     logger.debug("[WS_Arbiter] command: %s" % str(command))
+    ext = ExternalCommand(command)
+    app.from_q.put(ext)
+
+    # OK here it's ok, it will return a 200 code
+
+
+def do_recheck():
+    # Getting lists of informations for the commands
+    time_stamp          = request.forms.get('time_stamp', int(time.time()))
+    host_name           = request.forms.get('host_name', '')
+    service_description = request.forms.get('service_description', '')
+    logger.debug("[WS_Arbiter] Timestamp '%s' - host: '%s', service: '%s'" % (time_stamp,
+                                                                              host_name,
+                                                                              service_description
+                                                                             )
+                )
+
+    if not host_name:
+        abort(400, 'Missing parameter host_name')
+
+    if service_description:
+        # SCHEDULE_FORCED_SVC_CHECK;<host_name>;<service_description>;<check_time>
+        command = '[%s] SCHEDULE_FORCED_SVC_CHECK;%s;%s;%s\n' % (time_stamp,
+                                                                 host_name,
+                                                                 service_description,
+                                                                 time_stamp)
+    else:
+        # SCHEDULE_FORCED_HOST_CHECK;<host_name>;<check_time>
+        command = '[%s] SCHEDULE_FORCED_HOST_CHECK;%s;%s\n' % (time_stamp,
+                                                               host_name,
+                                                               time_stamp)
+
+    # We check for auth if it's not anonymously allowed
+    check_auth()
+
+    # Adding commands to the main queue()
+    logger.debug("[WS_Arbiter] command =  %s" % command)
     ext = ExternalCommand(command)
     app.from_q.put(ext)
 
@@ -253,16 +290,16 @@ def do_downtime():
     end_time            = request.forms.get('end_time', int(time.time()))
     # Fixed is 1 for a period between start and end time
     fixed               = request.forms.get('fixed', '1')
-    # Fixed is 0 (flexible) for a period of duration seconds from start time 
+    # Fixed is 0 (flexible) for a period of duration seconds from start time
     duration            = request.forms.get('duration', int('86400'))
     trigger_id          = request.forms.get('trigger_id', '0')
     author              = request.forms.get('author', 'anonymous')
     comment             = request.forms.get('comment', 'No comment')
     logger.debug("[WS_Arbiter] Downtime %s - host: '%s', service: '%s', comment: '%s'" % (action, host_name, service_description, comment))
- 
+
     if not host_name:
         abort(400, 'Missing parameter host_name')
-        
+
     if action == 'add':
         if service_description:
             # SCHEDULE_SVC_DOWNTIME;<host_name>;<service_description>;<start_time>;<end_time>;<fixed>;<trigger_id>;<duration>;<author>;<comment>
@@ -300,7 +337,7 @@ def do_downtime():
             # DEL_ALL_SVC_DOWNTIMES;<host_name>
             command = '[%s] DEL_ALL_HOST_DOWNTIMES;%s\n' % ( time_stamp,
                                                              host_name)
-                                                                                
+
 
     # We check for auth if it's not anonymously allowed
     if app.username != 'anonymous':
@@ -357,6 +394,7 @@ class Ws_arbiter(BaseModule):
         route('/reload', callback=do_reload, method='POST')
         route('/acknowledge', callback=do_acknowledge, method='POST')
         route('/downtime', callback=do_downtime, method='POST')
+        route('/recheck', callback=do_recheck, method='POST')
 
     # When you are in "external" mode, that is the main loop of your process
     def main(self):
