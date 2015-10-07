@@ -369,6 +369,11 @@ class Ws_arbiter(BaseModule):
             self.password = getattr(modconf, 'password', '')
             self.port = int(getattr(modconf, 'port', '7760'))
             self.host = getattr(modconf, 'host', '0.0.0.0')
+
+            self.routes = getattr(modconf, 'routes', None)
+            if self.routes is not None:
+                self.routes = self.routes.split(',')
+
             logger.info("[WS_Arbiter] Configuration done, host: %s(%s), username: %s)" %(self.host, self.port, self.username))
         except AttributeError:
             logger.error("[WS_Arbiter] The module is missing a property, check module declaration in shinken-specific.cfg")
@@ -389,12 +394,24 @@ class Ws_arbiter(BaseModule):
 
         logger.info("[WS_Arbiter] Server started")
         # And we link our page
-        route('/push_check_result', callback=get_page, method='POST')
-        route('/restart', callback=do_restart, method='POST')
-        route('/reload', callback=do_reload, method='POST')
-        route('/acknowledge', callback=do_acknowledge, method='POST')
-        route('/downtime', callback=do_downtime, method='POST')
-        route('/recheck', callback=do_recheck, method='POST')
+
+        if self.routes is None or 'push_check_result' in self.routes:
+            route('/push_check_result', callback=get_page, method='POST')
+
+        if self.routes is None or 'restart' in self.routes:
+            route('/restart', callback=do_restart, method='POST')
+
+        if self.routes is None or 'reload' in self.routes:
+            route('/reload', callback=do_reload, method='POST')
+
+        if self.routes is None or 'acknowledge' in self.routes:
+            route('/acknowledge', callback=do_acknowledge, method='POST')
+
+        if self.routes is None or 'downtime' in self.routes:
+            route('/downtime', callback=do_downtime, method='POST')
+
+        if self.routes is None or 'recheck' in self.routes:
+            route('/recheck', callback=do_recheck, method='POST')
 
     # When you are in "external" mode, that is the main loop of your process
     def main(self):
