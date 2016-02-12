@@ -43,12 +43,13 @@ curl --data "host_name=host1&service_description=Service1
 It is now possible to do bulk data on the webservice.
 """
 
+import json
 import os
 import sys
 import select
 import time
-######################## WIP   don't launch it!
 
+######################## WIP   don't launch it!
 
 from shinken.basemodule import BaseModule
 from shinken.external_command import ExternalCommand
@@ -144,6 +145,39 @@ def do_push_check_result():
         ext = ExternalCommand(c)
         app.from_q.put(ext)
     # OK here it's ok, it will return a 200 code
+
+
+def do_push_checks_perfdata():
+    check_auth()
+    # NB NB NB:
+    # see: http://bottlepy.org/docs/0.10/api.html?highlight=json#bottle.BaseRequest.json
+    # and http://bottlepy.org/docs/0.10/api.html?highlight=json#bottle.BaseRequest.MEMFILE_MAX
+    # so I use:
+    checks = json.load(request.body)
+    tnow = time.time()
+    for check in checks:
+        hostname = check.get('hostname', None)
+        if hostname is None:
+            logger.warning('check missing hostname key/value ; check_data=%r', check)
+            continue
+        service_description = check.get('service_description', '')
+        if service_description:
+            service_description = service_description.strip()
+        perfdata = check.get('perfdata', None)
+        if perfdata is None:
+            logger.warning('check missing output key/value ; check_data=%r', check)
+            continue
+        check_time = check.get('time', tnow)
+        cmd = ExternalCommand(
+            '[%d] PROCESS_%s_OUTPUT;%s;%s;WS_Arbiter|%s' % (
+                check_time,
+                'SERVICE' if service_description else 'HOST',
+                hostname,
+                service_description,
+                perfdata
+            )
+        )
+        app.from_q.put(cmd)
 
 
 def do_restart():
@@ -380,6 +414,7 @@ class Ws_arbiter(BaseModule):
         route('/acknowledge', callback=do_acknowledge, method='POST')
         route('/downtime', callback=do_downtime, method='POST')
         route('/recheck', callback=do_recheck, method='POST')
+        route('/push_checks_perfdata', callback=do_push_checks_perfdata, method='POST')
 
     # When you are in "external" mode, that is the main loop of your process
     def main(self):
