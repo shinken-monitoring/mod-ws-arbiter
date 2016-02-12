@@ -117,7 +117,7 @@ def get_commands(time_stamps, hosts, services, return_codes, outputs):
 
 
 def do_push_check_result():
-    commands_list = []
+    check_auth()
 
     try:
         # Getting lists of informations for the commands
@@ -141,8 +141,6 @@ def do_push_check_result():
         logger.error("[WS_Arbiter] failed to get the lists: %s" % str(e))
         commands_list = []
 
-    check_auth()
-
     # Adding commands to the main queue()
     logger.debug("[WS_Arbiter] commands: %s" % str(sorted(commands_list)))
     for c in sorted(commands_list):
@@ -153,11 +151,11 @@ def do_push_check_result():
 
 
 def do_restart():
+    check_auth()
+
     # Getting lists of informations for the commands
     time_stamp = request.forms.get('time_stamp', int(time.time()))
     command = '[%s] RESTART_PROGRAM\n' % time_stamp
-
-    check_auth()
 
     # Adding commands to the main queue()
     logger.warning("[WS_Arbiter] command: %s" % str(command))
@@ -168,11 +166,11 @@ def do_restart():
 
 
 def do_reload():
+    check_auth()
+
     # Getting lists of informations for the commands
     time_stamp = request.forms.get('time_stamp', int(time.time()))
     command = '[%s] RELOAD_CONFIG\n' % time_stamp
-
-    check_auth()
 
     # Adding commands to the main queue()
     logger.warning("[WS_Arbiter] command: %s" % str(command))
@@ -184,6 +182,8 @@ def do_reload():
 
 #service, sticky, notify, persistent, author, comment
 def do_acknowledge():
+    check_auth()
+
     # Getting lists of informations for the commands
     action              = request.forms.get('action', 'add')
     time_stamp          = request.forms.get('time_stamp', int(time.time()))
@@ -233,7 +233,6 @@ def do_acknowledge():
 
 
     # logger.warning("[WS_Arbiter] command: %s" % (command))
-    check_auth()
 
     # Adding commands to the main queue()
     logger.debug("[WS_Arbiter] command: %s" % str(command))
@@ -244,6 +243,9 @@ def do_acknowledge():
 
 
 def do_recheck():
+    # We check for auth if it's not anonymously allowed
+    check_auth()
+
     # Getting lists of informations for the commands
     time_stamp          = request.forms.get('time_stamp', int(time.time()))
     host_name           = request.forms.get('host_name', '')
@@ -269,9 +271,6 @@ def do_recheck():
                                                                host_name,
                                                                time_stamp)
 
-    # We check for auth if it's not anonymously allowed
-    check_auth()
-
     # Adding commands to the main queue()
     logger.debug("[WS_Arbiter] command =  %s" % command)
     ext = ExternalCommand(command)
@@ -281,6 +280,8 @@ def do_recheck():
 
 
 def do_downtime():
+    check_auth()
+
     # Getting lists of informations for the commands
     action              = request.forms.get('action', 'add')
     time_stamp          = request.forms.get('time_stamp', int(time.time()))
@@ -337,17 +338,6 @@ def do_downtime():
             # DEL_ALL_SVC_DOWNTIMES;<host_name>
             command = '[%s] DEL_ALL_HOST_DOWNTIMES;%s\n' % ( time_stamp,
                                                              host_name)
-
-
-    # We check for auth if it's not anonymously allowed
-    if app.username != 'anonymous':
-        basic = parse_auth(request.environ.get('HTTP_AUTHORIZATION', ''))
-        # Maybe the user not even ask for user/pass. If so, bail out
-        if not basic:
-            abort(401, 'Authentication required')
-        # Maybe he do not give the good credential?
-        if basic[0] != app.username or basic[1] != app.password:
-            abort(403, 'Authentication denied')
 
     # Adding commands to the main queue()
     logger.debug("[WS_Arbiter] command =  %s" % command)
