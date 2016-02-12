@@ -49,6 +49,7 @@ import select
 import time
 ######################## WIP   don't launch it!
 
+
 from shinken.basemodule import BaseModule
 from shinken.external_command import ExternalCommand
 from shinken.log import logger
@@ -83,6 +84,7 @@ def check_auth():
         if basic[0] != app.username or basic[1] != app.password:
             abort(403, 'Authentication denied')
 
+
 def get_commands(time_stamps, hosts, services, return_codes, outputs):
     """Composing a command list based on the information received in
     POST request"""
@@ -102,12 +104,12 @@ def get_commands(time_stamps, hosts, services, return_codes, outputs):
         commands.append(cmd)
 
     # Trivial case: empty commmand list
-    if (return_codes is None or len(return_codes) == 0):
+    if return_codes is None or len(return_codes) == 0:
         return commands
 
     # Sanity check: if we get N return codes, we must have N hosts.
     # The other values could be None
-    if (len(return_codes) != len(hosts)):
+    if len(return_codes) != len(hosts):
         logger.error("[WS_Arbiter] number of return codes (%d) does not match number of hosts (%d)" % (len(return_codes), len(hosts)))
         abort(400, "number of return codes does not match number of hosts")
 
@@ -121,11 +123,6 @@ def do_push_check_result():
 
     try:
         # Getting lists of informations for the commands
-        time_stamp_list = []
-        host_name_list = []
-        service_description_list = []
-        return_code_list = []
-        output_list = []
         time_stamp_list = request.forms.getall(key='time_stamp')
         logger.debug("[WS_Arbiter] time_stamp_list: %s" % (time_stamp_list))
         host_name_list = request.forms.getall(key='host_name')
@@ -146,7 +143,6 @@ def do_push_check_result():
     for c in sorted(commands_list):
         ext = ExternalCommand(c)
         app.from_q.put(ext)
-
     # OK here it's ok, it will return a 200 code
 
 
