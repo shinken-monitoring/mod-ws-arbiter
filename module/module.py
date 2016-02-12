@@ -137,8 +137,8 @@ def do_push_check_result():
         output_list = request.forms.getall(key='output')
         logger.debug("[WS_Arbiter] output_list: %s" % (output_list))
         commands_list = get_commands(time_stamp_list, host_name_list, service_description_list, return_code_list, output_list)
-    except Exception, e:
-        logger.error("[WS_Arbiter] failed to get the lists: %s" % str(e))
+    except Exception as err:
+        logger.error("[WS_Arbiter] failed to get the lists: %s" % err)
         commands_list = []
 
     # Adding commands to the main queue()
@@ -347,7 +347,6 @@ def do_downtime():
     # OK here it's ok, it will return a 200 code
 
 
-
 # This module will open an HTTP service, where a user can send a command, like a check
 # return.
 class Ws_arbiter(BaseModule):
@@ -363,8 +362,8 @@ class Ws_arbiter(BaseModule):
         except AttributeError:
             logger.error("[WS_Arbiter] The module is missing a property, check module declaration in shinken-specific.cfg")
             raise
-        except Exception, e:
-            logger.error("[WS_Arbiter] Exception : %s" % str(e))
+        except Exception as err:
+            logger.error("[WS_Arbiter] Exception : %s" % err)
             raise
 
     # We initialize the HTTP part. It's a simple wsgi backend
@@ -373,8 +372,8 @@ class Ws_arbiter(BaseModule):
         logger.info("[WS_Arbiter] Starting WS arbiter http socket")
         try:
             self.srv = run(host=self.host, port=self.port, server='wsgirefselect')
-        except Exception, e:
-            logger.error("[WS_Arbiter] Exception : %s" % str(e))
+        except Exception as err:
+            logger.error("[WS_Arbiter] Exception : %s" % err)
             raise
 
         logger.info("[WS_Arbiter] Server started")
@@ -413,8 +412,8 @@ class Ws_arbiter(BaseModule):
             input = [self.srv.socket]
             try:
                 inputready, _, _ = select.select(input, [], [], 1)
-            except select.error, e:
-                logger.warning("[WS_Arbiter] Exception: %s", str(e))
+            except select.error as err:
+                logger.warning("[WS_Arbiter] Exception: %s", err)
                 continue
             for s in inputready:
                 # If it's a web request, ask the webserver to do it
