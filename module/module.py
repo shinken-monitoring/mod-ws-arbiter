@@ -116,7 +116,7 @@ def get_commands(time_stamps, hosts, services, return_codes, outputs):
     return commands
 
 
-def get_page():
+def do_push_check_result():
     commands_list = []
 
     try:
@@ -389,7 +389,7 @@ class Ws_arbiter(BaseModule):
 
         logger.info("[WS_Arbiter] Server started")
         # And we link our page
-        route('/push_check_result', callback=get_page, method='POST')
+        route('/push_check_result', callback=do_push_check_result, method='POST')
         route('/restart', callback=do_restart, method='POST')
         route('/reload', callback=do_reload, method='POST')
         route('/acknowledge', callback=do_acknowledge, method='POST')
