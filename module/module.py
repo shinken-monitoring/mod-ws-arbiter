@@ -53,7 +53,8 @@ from shinken.basemodule import BaseModule
 from shinken.external_command import ExternalCommand
 from shinken.log import logger
 
-from shinken.webui.bottlewebui import Bottle, run, static_file, view, route, request, response, abort, parse_auth
+from shinken.webui.bottlewebui import Bottle, run, static_file, view, route
+from shinken.webui.bottlewebui import request, response, abort, parse_auth
 
 properties = {
     'daemons': ['arbiter', 'receiver'],
@@ -95,9 +96,13 @@ def get_commands(time_stamps, hosts, services, return_codes, outputs):
         """Simple function to create a command from the inputs"""
         cmd = ""
         if not s or s == "":
-            cmd = '[%s] PROCESS_HOST_CHECK_RESULT;%s;%s;%s' % (t if t is not None else current_time_stamp, h, r, o)
+            cmd = '[%s] PROCESS_HOST_CHECK_RESULT;%s;%s;%s' % (
+                t if t is not None else current_time_stamp, h, r, o
+            )
         else:
-            cmd = '[%s] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%s;%s' % (t if t is not None else current_time_stamp, h, s, r, o)
+            cmd = '[%s] PROCESS_SERVICE_CHECK_RESULT;%s;%s;%s;%s' % (
+                t if t is not None else current_time_stamp, h, s, r, o
+            )
         logger.debug("[WS_Arbiter] CMD: %s" % (cmd))
         commands.append(cmd)
 
@@ -108,7 +113,10 @@ def get_commands(time_stamps, hosts, services, return_codes, outputs):
     # Sanity check: if we get N return codes, we must have N hosts.
     # The other values could be None
     if (len(return_codes) != len(hosts)):
-        logger.error("[WS_Arbiter] number of return codes (%d) does not match number of hosts (%d)" % (len(return_codes), len(hosts)))
+        logger.error(
+            "[WS_Arbiter] number of return codes (%d) does not match number "
+            "of hosts (%d)" % (len(return_codes), len(hosts))
+        )
         abort(400, "number of return codes does not match number of hosts")
 
     map(_compose_command, time_stamps, hosts, services, return_codes, outputs)
@@ -131,12 +139,21 @@ def get_page():
         host_name_list = request.forms.getall(key='host_name')
         logger.debug("[WS_Arbiter] host_name_list: %s" % (host_name_list))
         service_description_list = request.forms.getall(key='service_description')
-        logger.debug("[WS_Arbiter] service_description_list: %s" % (service_description_list))
+        logger.debug(
+            "[WS_Arbiter] service_description_list: %s" %
+            (service_description_list)
+        )
         return_code_list = request.forms.getall(key='return_code')
         logger.debug("[WS_Arbiter] return_code_list: %s" % (return_code_list))
         output_list = request.forms.getall(key='output')
         logger.debug("[WS_Arbiter] output_list: %s" % (output_list))
-        commands_list = get_commands(time_stamp_list, host_name_list, service_description_list, return_code_list, output_list)
+        commands_list = get_commands(
+            time_stamp_list,
+            host_name_list,
+            service_description_list,
+            return_code_list,
+            output_list
+        )
     except Exception, e:
         logger.error("[WS_Arbiter] failed to get the lists: %s" % str(e))
         commands_list = []
@@ -194,42 +211,51 @@ def do_acknowledge():
     persistent          = request.forms.get('persistent', '1')
     author              = request.forms.get('author', 'anonymous')
     comment             = request.forms.get('comment', 'No comment')
-    logger.debug("[WS_Arbiter] Acknowledge %s - host: '%s', service: '%s', comment: '%s'" % (action, host_name, service_description, comment))
+    logger.debug(
+        "[WS_Arbiter] Acknowledge %s - host: '%s', service: '%s', "
+        "comment: '%s'" % (action, host_name, service_description, comment)
+    )
 
     if not host_name:
         abort(400, 'Missing parameter host_name')
 
     if action == 'add':
         if service_description:
-            command = '[%s] ACKNOWLEDGE_SVC_PROBLEM;%s;%s;%s;%s;%s;%s;%s\n' % ( time_stamp,
-                                                                                host_name,
-                                                                                service_description,
-                                                                                sticky,
-                                                                                notify,
-                                                                                persistent,
-                                                                                author,
-                                                                                comment
-                                                                                )
+            command = '[%s] ACKNOWLEDGE_SVC_PROBLEM;%s;%s;%s;%s;%s;%s;%s\n' % (
+                time_stamp,
+                host_name,
+                service_description,
+                sticky,
+                notify,
+                persistent,
+                author,
+                comment
+            )
         else:
-            command = '[%s] ACKNOWLEDGE_HOST_PROBLEM;%s;%s;%s;%s;%s;%s\n' % (   time_stamp,
-                                                                                host_name,
-                                                                                sticky,
-                                                                                notify,
-                                                                                persistent,
-                                                                                author,
-                                                                                comment
-                                                                                )
+            command = '[%s] ACKNOWLEDGE_HOST_PROBLEM;%s;%s;%s;%s;%s;%s\n' % (
+                time_stamp,
+                host_name,
+                sticky,
+                notify,
+                persistent,
+                author,
+                comment
+            )
 
     if action == 'delete':
         if service_description:
             # REMOVE_SVC_ACKNOWLEDGEMENT;<host_name>;<service_description>
-            command = '[%s] REMOVE_SVC_ACKNOWLEDGEMENT;%s;%s\n' % ( time_stamp,
-                                                                    host_name,
-                                                                    service_description)
+            command = '[%s] REMOVE_SVC_ACKNOWLEDGEMENT;%s;%s\n' % (
+                time_stamp,
+                host_name,
+                service_description
+            )
         else:
             # REMOVE_HOST_ACKNOWLEDGEMENT;<host_name>
-            command = '[%s] REMOVE_HOST_ACKNOWLEDGEMENT;%s\n' % ( time_stamp,
-                                                                  host_name)
+            command = '[%s] REMOVE_HOST_ACKNOWLEDGEMENT;%s\n' % (
+                time_stamp,
+                host_name
+            )
 
 
     # logger.warning("[WS_Arbiter] command: %s" % (command))
@@ -286,6 +312,7 @@ def do_downtime():
     time_stamp          = request.forms.get('time_stamp', int(time.time()))
     host_name           = request.forms.get('host_name', '')
     service_description = request.forms.get('service_description', '')
+    downtime_id         = request.forms.get('downtime_id', '')
     start_time          = request.forms.get('start_time', int(time.time()))
     end_time            = request.forms.get('end_time', int(time.time()))
     # Fixed is 1 for a period between start and end time
@@ -295,7 +322,10 @@ def do_downtime():
     trigger_id          = request.forms.get('trigger_id', '0')
     author              = request.forms.get('author', 'anonymous')
     comment             = request.forms.get('comment', 'No comment')
-    logger.debug("[WS_Arbiter] Downtime %s - host: '%s', service: '%s', comment: '%s'" % (action, host_name, service_description, comment))
+    logger.debug(
+        "[WS_Arbiter] Downtime %s - host: '%s', service: '%s', comment: '%s'" %
+        (action, host_name, service_description, comment)
+    )
 
     if not host_name:
         abort(400, 'Missing parameter host_name')
@@ -303,51 +333,63 @@ def do_downtime():
     if action == 'add':
         if service_description:
             # SCHEDULE_SVC_DOWNTIME;<host_name>;<service_description>;<start_time>;<end_time>;<fixed>;<trigger_id>;<duration>;<author>;<comment>
-            command = '[%s] SCHEDULE_SVC_DOWNTIME;%s;%s;%s;%s;%s;%s;%s;%s;%s\n' % ( time_stamp,
-                                                                                    host_name,
-                                                                                    service_description,
-                                                                                    start_time,
-                                                                                    end_time,
-                                                                                    fixed,
-                                                                                    trigger_id,
-                                                                                    duration,
-                                                                                    author,
-                                                                                    comment
-                                                                                   )
+            command = '[%s] SCHEDULE_SVC_DOWNTIME;%s;%s;%s;%s;%s;%s;%s;%s;%s\n' % (
+                time_stamp,
+                host_name,
+                service_description,
+                start_time,
+                end_time,
+                fixed,
+                trigger_id,
+                duration,
+                author,
+                comment
+            )
         else:
             # SCHEDULE_HOST_DOWNTIME;<host_name>;<start_time>;<end_time>;<fixed>;<trigger_id>;<duration>;<author>;<comment>
-            command = '[%s] SCHEDULE_HOST_DOWNTIME;%s;%s;%s;%s;%s;%s;%s;%s\n' % (   time_stamp,
-                                                                                    host_name,
-                                                                                    start_time,
-                                                                                    end_time,
-                                                                                    fixed,
-                                                                                    trigger_id,
-                                                                                    duration,
-                                                                                    author,
-                                                                                    comment
-                                                                                )
+            command = '[%s] SCHEDULE_HOST_DOWNTIME;%s;%s;%s;%s;%s;%s;%s;%s\n' % (
+                time_stamp,
+                host_name,
+                start_time,
+                end_time,
+                fixed,
+                trigger_id,
+                duration,
+                author,
+                comment
+            )
 
     if action == 'delete':
         if service_description:
-            # DEL_ALL_SVC_DOWNTIMES;<host_name>;<service_description>
-            command = '[%s] DEL_ALL_SVC_DOWNTIMES;%s;%s\n' % ( time_stamp,
-                                                               host_name,
-                                                               service_description)
+            if downtime_id:
+                # DEL_SVC_DOWNTIMES;<downtime_id>
+                command = '[%s] DEL_SVC_DOWNTIME;%s\n' % (
+                    time_stamp,
+                    downtime_id
+                )
+            else:
+                # DEL_ALL_SVC_DOWNTIMES;<host_name>;<service_description>
+                command = '[%s] DEL_ALL_SVC_DOWNTIMES;%s;%s\n' % (
+                    time_stamp,
+                    host_name,
+                    service_description
+                )
         else:
-            # DEL_ALL_SVC_DOWNTIMES;<host_name>
-            command = '[%s] DEL_ALL_HOST_DOWNTIMES;%s\n' % ( time_stamp,
-                                                             host_name)
-
+            if downtime_id:
+                # DEL_HOST_DOWNTIMES;<downtime_id>
+                command = '[%s] DEL_HOST_DOWNTIME;%s\n' % (
+                    time_stamp,
+                    downtime_id
+                )
+            else:
+                # DEL_ALL_SVC_DOWNTIMES;<host_name>
+                command = '[%s] DEL_ALL_HOST_DOWNTIMES;%s\n' % (
+                    time_stamp,
+                    host_name
+                )
 
     # We check for auth if it's not anonymously allowed
-    if app.username != 'anonymous':
-        basic = parse_auth(request.environ.get('HTTP_AUTHORIZATION', ''))
-        # Maybe the user not even ask for user/pass. If so, bail out
-        if not basic:
-            abort(401, 'Authentication required')
-        # Maybe he do not give the good credential?
-        if basic[0] != app.username or basic[1] != app.password:
-            abort(403, 'Authentication denied')
+    check_auth()
 
     # Adding commands to the main queue()
     logger.debug("[WS_Arbiter] command =  %s" % command)
@@ -374,9 +416,15 @@ class Ws_arbiter(BaseModule):
             if self.routes is not None:
                 self.routes = self.routes.split(',')
 
-            logger.info("[WS_Arbiter] Configuration done, host: %s(%s), username: %s)" %(self.host, self.port, self.username))
+            logger.info(
+                "[WS_Arbiter] Configuration done, host: %s(%s), username: %s)" %
+                (self.host, self.port, self.username)
+            )
         except AttributeError:
-            logger.error("[WS_Arbiter] The module is missing a property, check module declaration in shinken-specific.cfg")
+            logger.error(
+                "[WS_Arbiter] The module is missing a property, check module "
+                "declaration in shinken-specific.cfg"
+            )
             raise
         except Exception, e:
             logger.error("[WS_Arbiter] Exception : %s" % str(e))
